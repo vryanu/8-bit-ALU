@@ -5,20 +5,21 @@
 #include "headers/bintoasm.h"
 #include "headers/asmtobin.h"
 /*
-Usage ./translator type, input.txt, output.txt
+Usage ./main <type>, <input.txt>, <output.txt>
 
 Type 'bta' bin to asm
 Type 'atb' asm to bin
 Type 'ath' asm to hex
 
 Commands in a .txt must be seperated by newline
+Comment: <command> * This is a comment
 Proper syntax found in headers
 */
 int main(int argc, char *argv[])
 {
     if (argc != 4)
     {
-        printf("./translator type, input.txt, output.txt\n");
+        printf("Usage ./main <type>, <input.txt>, <output.txt>\n");
         return 1;
     }
     char *type = argv[1];
@@ -31,6 +32,10 @@ int main(int argc, char *argv[])
     while (fgets(line, sizeof(line), input) != NULL)
     {
         line[strcspn(line, "\r\n")] = '\0';
+        
+        char *comment = strchr(line, '*');
+        if (comment != NULL)
+            *comment = '\0';
 
         if (line[0] == '\0')
             continue;
