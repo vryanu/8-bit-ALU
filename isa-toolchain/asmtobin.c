@@ -1,0 +1,115 @@
+#include <stdio.h>
+#include <stdbool.h>
+#include <string.h>
+#include <stdlib.h>
+#include "headers/asmtobin.h"
+
+#define MOV_BIT   2
+#define LOAD_BIT  3
+#define STORE_BIT 4
+#define SET_BIT   5
+
+char bin[9];
+
+static void setBit(const char val, const int start, const int end);
+static void findArgs(const char *asm_str, const char *op);
+static void findCommand(const char *asm_str, char op[6]);
+
+static inline void op_add(){ setBit('0', 6, 8); }
+static inline void op_sub(){ setBit('1', 8, 8); }
+static inline void op_mul(){ setBit('1', 7, 7); }
+static inline void op_div(){ setBit('1', 7, 8); }
+static inline void op_mod(){ setBit('1', 6, 6); }
+static inline void op_and(){ bin[5] = '1'; bin[7] = '1'; }
+static inline void op_or(){ setBit('1', 6, 7); }
+static inline void op_xor(){ setBit('1', 6, 8); }
+static inline void op_load(){ setBit('1', LOAD_BIT + 1, LOAD_BIT + 1); }
+static inline void op_store(){ setBit('1', STORE_BIT + 1, STORE_BIT + 1); }
+static inline void op_mov(){ setBit('1', MOV_BIT + 1, MOV_BIT + 1); }
+static inline void op_set(){ op_mov(); setBit('1', SET_BIT + 1, SET_BIT + 1); }
+
+static inline void regb(char pos){if (pos == 'u') { bin[0] = '0'; bin[1] = '0'; } else { bin[6] = '0'; bin[7] = '0'; }}
+static inline void rega(char pos){if (pos == 'u') { bin[0] = '0'; bin[1] = '1'; } else { bin[6] = '0'; bin[7] = '1'; }}
+static inline void mar(char pos){if (pos == 'u') { bin[0] = '1'; bin[1] = '0'; } else { bin[6] = '1'; bin[7] = '0'; }}
+static inline void acc(char pos){if (pos == 'u') { bin[0] = '1'; bin[1] = '1'; } else { bin[6] = '1'; bin[7] = '1'; }}
+
+void asmtobin(const char *asm_str, FILE *output, const char type)
+{
+    memset(bin, '0', 8);
+    bin[8] = '\0';
+
+    char op[6] = {0};
+    findCommand(asm_str, op);
+
+    findArgs(asm_str, op);
+    if (type == 'b')
+        fprintf(output, "%s\n", bin);
+    else if (type == 'h')
+        fprintf(output, "%lX\n", strtol(bin, NULL, 2));
+}
+
+static void setBit(const char val, const int start, const int end)
+{
+    for (int i = start; i <= end; i++)
+        bin[i - 1] = val;
+}
+
+static void findCommand(const char *asm_str, char op[6])
+{
+    if (sscanf(asm_str, "%5s", op) != 1)
+    {
+        op[0] = '\0';
+        return;
+    }
+
+    if (strcmp(op, "ADD") == 0) op_add();
+    else if (strcmp(op, "SUB") == 0) op_sub();
+    else if (strcmp(op, "MUL") == 0) op_mul();
+    else if (strcmp(op, "DIV") == 0) op_div();
+    else if (strcmp(op, "MOD") == 0) op_mod();
+    else if (strcmp(op, "AND") == 0) op_and();
+    else if (strcmp(op, "OR") == 0) op_or();
+    else if (strcmp(op, "XOR") == 0) op_xor();
+    else if (strcmp(op, "MOV") == 0) op_mov();
+    else if (strcmp(op, "LOAD") == 0) op_load();
+    else if (strcmp(op, "STORE") == 0) op_store();
+    else if (strcmp(op, "SET") == 0) op_set();
+    else if (strcmp(op, "END") == 0) bin[0] = '1';
+    else op[0] = '\0';
+}
+
+static void findArgs(const char *asm_str, const char *op)
+{
+    if (strcmp(op, "MOV") != 0 && strcmp(op, "SET") != 0)
+        return;
+
+    char args[64];
+    snprintf(args, sizeof(args), "%s", asm_str);
+
+    strtok(args, " \t\r\n");
+    char *val = strtok(NULL, " \t\r\n");
+    char *loc = strtok(NULL, " \t\r\n");
+
+    if (strcmp(op, "SET") == 0)
+    {
+
+        if (strcmp(val, "REGA") == 0) rega('d');
+        else if (strcmp(val, "REGB") == 0) regb('d');
+        else if (strcmp(val, "MAR") == 0) mar('d');
+        else if (strcmp(val, "ACC") == 0) acc('d');
+
+        bin[0] = ((loc[0] - '0') & 2) ? '1' : '0';
+        bin[1] = ((loc[0] - '0') & 1) ? '1' : '0';
+        return;
+    }
+
+    if (strcmp(val, "REGA") == 0) rega('u');
+    else if (strcmp(val, "REGB") == 0) regb('u');
+    else if (strcmp(val, "MAR") == 0) mar('u');
+    else if (strcmp(val, "ACC") == 0) acc('u');
+
+    if (strcmp(loc, "REGA") == 0) rega('d');
+    else if (strcmp(loc, "REGB") == 0) regb('d');
+    else if (strcmp(loc, "MAR") == 0) mar('d');
+    else if (strcmp(loc, "ACC") == 0) acc('d');
+}
