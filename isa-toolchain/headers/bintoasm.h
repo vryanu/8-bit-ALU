@@ -11,7 +11,7 @@ Proper BIN syntax:
 000 ADD   00 REG B
 001 SUB   01 REG A
 010 MUL   10 MAR
-011 DIV   11 ACC
+011 DIV   11 ACC (ACC acts as loaded RAM output when used as a val) 
 100 MOD
 101 AND
 110 OR
