@@ -9,7 +9,7 @@
 ART & RAM commands
 
 ART [00000][000 OP]
-RAM [00 MOV/SET VAL][MOV][STORE][LOAD][SET][00 MOV/SET LOC]
+RAM [00 MOV/SET VAL][MOV][LOAD][STORE][SET][00 MOV/SET LOC]
 
 * ACC acts as RAM output when used as a val
 * MOV must be 1 for SET to be used
@@ -19,3 +19,5 @@ RAM [00 MOV/SET VAL][MOV][STORE][LOAD][SET][00 MOV/SET LOC]
 * SET [2 bit number val] [Loc]
 * STORE stores a value at the selected address
 * LOAD loads a value at the selected address
+
+[Example Program](examples/val-swapper/asm.asm)
