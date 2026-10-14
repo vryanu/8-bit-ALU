@@ -6,9 +6,11 @@
 * Operators ADD000, SUB001, MUL010, DIV011, MOD100, AND101, OR110, XOR111
 
 **ISA**
+
 ART & RAM commands
 
 ART [00000][000 OP]
+
 RAM [00 MOV/SET VAL][MOV][LOAD][STORE][SET][00 MOV/SET LOC]
 
 * ACC acts as RAM output when used as a val
