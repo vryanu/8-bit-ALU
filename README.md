@@ -7,19 +7,22 @@
 
 **ISA**
 
-ART & RAM commands
+ART & RAM & LOOP commands
 
 ART [00000][000 OP]
 
 RAM [00 MOV/SET VAL][MOV][LOAD][STORE][SET][00 MOV/SET LOC]
 
+LOOP [3 BITS ITERATIONS][2 BITS ENABLE][3 BITS JUMP BACK AMOUNT]
+
 * ACC acts as RAM output when used as a val
 * MOV must be 1 for SET to be used
 
 **Commands Usage**
-* MOV [Val] [Loc]
-* SET [2 bit number val] [Loc]
+* MOV [Val] [Loc] Moves a value to another register
+* SET [2 bit number val] [Loc] Sets a value to a register
 * STORE stores a value at the selected address
 * LOAD loads a value at the selected address
+* LOOP [Iterations] [Jump back] Loops a segment of code
 
-[Example Program](examples/variable-swap/asm.asm)
+[Examples](examples/)
