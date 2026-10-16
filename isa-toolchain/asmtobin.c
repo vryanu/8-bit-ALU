@@ -14,6 +14,7 @@ char bin[9];
 static void setBit(const char val, const int start, const int end);
 static void findArgs(const char *asm_str, const char *op);
 static void findCommand(const char *asm_str, char op[6]);
+static char *ntob(int num);
 
 static inline void op_add(){ setBit('0', 6, 8); }
 static inline void op_sub(){ setBit('1', 8, 8); }
@@ -27,6 +28,7 @@ static inline void op_load(){ setBit('1', LOAD_BIT + 1, LOAD_BIT + 1); }
 static inline void op_store(){ setBit('1', STORE_BIT + 1, STORE_BIT + 1); }
 static inline void op_mov(){ setBit('1', MOV_BIT + 1, MOV_BIT + 1); }
 static inline void op_set(){ op_mov(); setBit('1', SET_BIT + 1, SET_BIT + 1); }
+static inline void op_loop(){ bin[LOAD_BIT] = '1', bin[STORE_BIT] = '1'; }
 
 static inline void regb(char pos){if (pos == 'u') { bin[0] = '0'; bin[1] = '0'; } else { bin[6] = '0'; bin[7] = '0'; }}
 static inline void rega(char pos){if (pos == 'u') { bin[0] = '0'; bin[1] = '1'; } else { bin[6] = '0'; bin[7] = '1'; }}
@@ -72,6 +74,7 @@ static void findCommand(const char *asm_str, char op[6])
     else if (strcmp(op, "XOR") == 0) op_xor();
     else if (strcmp(op, "MOV") == 0) op_mov();
     else if (strcmp(op, "LOAD") == 0) op_load();
+    else if (strcmp(op, "LOOP") == 0) op_loop();
     else if (strcmp(op, "STORE") == 0) op_store();
     else if (strcmp(op, "SET") == 0) op_set();
     else if (strcmp(op, "END") == 0) bin[0] = '1';
@@ -80,7 +83,7 @@ static void findCommand(const char *asm_str, char op[6])
 
 static void findArgs(const char *asm_str, const char *op)
 {
-    if (strcmp(op, "MOV") != 0 && strcmp(op, "SET") != 0)
+    if (strcmp(op, "MOV") != 0 && strcmp(op, "SET") != 0 && strcmp(op, "LOOP") !=0)
         return;
 
     char args[64];
@@ -89,6 +92,40 @@ static void findArgs(const char *asm_str, const char *op)
     strtok(args, " \t\r\n");
     char *val = strtok(NULL, " \t\r\n");
     char *loc = strtok(NULL, " \t\r\n");
+
+    if (strcmp(op, "LOOP") == 0)
+    {
+        if (val == NULL || loc == NULL)
+            return;
+
+        int cloop = atoi(val);
+        int sloop = atoi(loc);
+
+        if (cloop < 0 || cloop > 7 || sloop < 0 || sloop > 7)
+            return;
+
+        char *bin_c = ntob(cloop);
+        char *bin_s = ntob(sloop);
+        if (bin_c == NULL || bin_s == NULL)
+        {
+            free(bin_c);
+            free(bin_s);
+            return;
+        }
+
+        bin[0] = bin_c[sizeof(int) * 8 - 3];
+        bin[1] = bin_c[sizeof(int) * 8 - 2];
+        bin[2] = bin_c[sizeof(int) * 8 - 1];
+
+        bin[5] = bin_s[sizeof(int) * 8 - 3];
+        bin[6] = bin_s[sizeof(int) * 8 - 2];
+        bin[7] = bin_s[sizeof(int) * 8 - 1];
+
+        free(bin_c);
+        free(bin_s);
+
+        return;
+    }
 
     if (strcmp(op, "SET") == 0)
     {
@@ -102,14 +139,33 @@ static void findArgs(const char *asm_str, const char *op)
         bin[1] = ((loc[0] - '0') & 1) ? '1' : '0';
         return;
     }
+    if (strcmp(op, "LOOP") != 0)
+    {
+        if (strcmp(val, "REGA") == 0) rega('u');
+        else if (strcmp(val, "REGB") == 0) regb('u');
+        else if (strcmp(val, "MAR") == 0) mar('u');
+        else if (strcmp(val, "ACC") == 0) acc('u');
 
-    if (strcmp(val, "REGA") == 0) rega('u');
-    else if (strcmp(val, "REGB") == 0) regb('u');
-    else if (strcmp(val, "MAR") == 0) mar('u');
-    else if (strcmp(val, "ACC") == 0) acc('u');
+        if (strcmp(loc, "REGA") == 0) rega('d');
+        else if (strcmp(loc, "REGB") == 0) regb('d');
+        else if (strcmp(loc, "MAR") == 0) mar('d');
+        else if (strcmp(loc, "ACC") == 0) acc('d');
+    }
+}
 
-    if (strcmp(loc, "REGA") == 0) rega('d');
-    else if (strcmp(loc, "REGB") == 0) regb('d');
-    else if (strcmp(loc, "MAR") == 0) mar('d');
-    else if (strcmp(loc, "ACC") == 0) acc('d');
+char *ntob(int n) 
+{
+    int bits = sizeof(n) * 8;
+    
+    char *str = (char*)malloc(bits + 1);
+    if (str == NULL)
+        return NULL;
+
+    str[bits] = '\0';
+    for (int i = bits - 1; i >= 0; i--) {
+        str[i] = (n & 1) ? '1' : '0';
+        n >>= 1;
+    }
+
+    return str;
 }
