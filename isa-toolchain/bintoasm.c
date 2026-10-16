@@ -3,27 +3,11 @@
 #include <stdbool.h>
 #include <string.h>
 #include "headers/bintoasm.h"
-/*
-Create function bintoasm()
 
-Commands in a .txt must be seperated by newline
-
-Proper BIN syntax:
-000 ADD   00 REG B
-001 SUB   01 REG A
-010 MUL   10 MAR
-011 DIV   11 ACC
-100 MOD
-101 AND
-110 OR
-111 XOR
-ART [5 BITS 0] [3 BITS OP]
-RAM [2 BITS MOV/SET VAL] [MOV] [LOAD] [STORE] [SET (REQUIRES MOV)] [2 BITS MOV/SET LOC]
-*/
-
-bool VAL1, VAL2, MOV, LOAD, STORE, SET, LOC1, LOC2, OP1, OP2, OP3;
-char *ctype, *op, *val, *loc;
+bool VAL1, VAL2, MOV, LOAD, STORE, SET, LOC1, LOC2, OP1, OP2, OP3, LOOP;
+char *ctype, *op, *val, *loc, *aloop, *sloop;
 int cset = 0;
+long count_loop = 0, sub_loop = 0;
 
 static bool isOn(char val);
 static void setVals(const char *binary_str);
@@ -41,6 +25,8 @@ void bintoasm(const char *binary_str, FILE *output)
 
     if (strcmp(ctype, "END") == 0)
         snprintf(command, sizeof(command), "END");
+    else if (LOOP)
+        snprintf(command, sizeof(command), "LOOP %ld %ld", count_loop, sub_loop);
     else if (MOV && SET)
         snprintf(command, sizeof(command), "SET %s %d", loc, cset);
     else if (MOV)
@@ -60,7 +46,7 @@ static bool isOn(char val)
 
 static void setVals(const char *binary_str)
 {
-    VAL1 = VAL2 = MOV = LOAD = STORE = SET = LOC1 = LOC2 = OP1 = OP2 = OP3 = false;
+    VAL1 = VAL2 = MOV = LOAD = STORE = SET = LOC1 = LOC2 = OP1 = OP2 = OP3 = LOOP = false;
     ctype = "";
     op = "";
     val = "";
@@ -79,7 +65,15 @@ static void setVals(const char *binary_str)
     LOAD  = isOn(binary_str[3]);
     STORE = isOn(binary_str[4]);
 
-    if (MOV)
+    if (LOAD && STORE)
+    {
+        LOOP = true;
+        OP1 = isOn(binary_str[5]);
+        OP2 = isOn(binary_str[6]);
+        OP3 = isOn(binary_str[7]);
+    }
+
+    else if (MOV)
     {
         SET  = isOn(binary_str[5]);
         LOC1 = isOn(binary_str[6]);
@@ -124,18 +118,38 @@ static void findValLocOp(const char *num, const char type)
 
 static void setValLoc(void)
 {
-    char vstr[3] = "00";
-    char vloc[3] = "00";
+    if (strcmp(ctype, "LOOP") == 0)
+        {
+            char cloop[4] = "000";
+            char sloop[4] = "000";
 
-    vstr[0] = VAL1 ? '1' : '0';
-    vstr[1] = VAL2 ? '1' : '0';
-    vloc[0] = LOC1 ? '1' : '0';
-    vloc[1] = LOC2 ? '1' : '0';
+            cloop[0] = VAL1 ? '1' : '0';
+            cloop[1] = VAL2 ? '1' : '0';
+            cloop[2] = MOV ? '1' : '0';
 
-    findValLocOp(vstr, 'v');
-    findValLocOp(vloc, 'l');
+            sloop[0] = OP1 ? '1' : '0';
+            sloop[1] = OP2 ? '1' : '0';
+            sloop[2] = OP3 ? '1' : '0';
 
-    cset = (VAL1 ? 2 : 0) + (VAL2 ? 1 : 0);
+            count_loop = strtol(cloop, NULL, 2);
+            sub_loop = strtol(sloop, NULL, 2);
+
+        }
+        else
+        {
+            char vstr[3] = "00";
+            char vloc[3] = "00";
+
+            vstr[0] = VAL1 ? '1' : '0';
+            vstr[1] = VAL2 ? '1' : '0';
+            vloc[0] = LOC1 ? '1' : '0';
+            vloc[1] = LOC2 ? '1' : '0';
+
+            findValLocOp(vstr, 'v');
+            findValLocOp(vloc, 'l');
+
+            cset = (VAL1 ? 2 : 0) + (VAL2 ? 1 : 0);
+        }
 }
 
 static void setOp(void)
@@ -154,7 +168,12 @@ static void cmdType(void)
     if (strcmp(ctype, "END") == 0)
         return;
 
-    if (MOV)
+    if (LOOP)
+    {
+        ctype = "LOOP";
+        setValLoc();
+    }
+    else if (MOV)
     {
         ctype = SET ? "SET" : "MOV";
         setValLoc();
